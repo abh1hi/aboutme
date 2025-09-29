@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3D Conversation Explorer</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .plotly-graph-div { width: 100%; min-height: 65vh; }
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-950 to-black text-gray-200 antialiased">
+
+  <!-- Container -->
+  <div class="container mx-auto px-4 sm:px-6 lg:px-10 py-8">
+
+    <!-- Header -->
+    <header class="text-center mb-10 animate-fade-in-down">
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">
+        Conversation Insights
+      </h1>
+      <p class="text-gray-400 text-lg mt-3 max-w-2xl mx-auto">
+        A futuristic 3D visualization of your conversation data. Rotate, zoom, and interact with points for deeper insights.
+      </p>
+    </header>
+
+    <!-- Upload Section -->
+    <section class="mb-10 bg-gray-800/40 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-lg p-6 sm:p-8 animate-fade-in-up">
+      <h2 class="text-xl sm:text-2xl font-semibold text-white mb-6 text-center">
+        Visualize Your Own Data
+      </h2>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-5">
+        <!-- Upload Button -->
+        <label for="json-upload"
+          class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-300">
+          Upload JSON
+        </label>
+        <input type="file" id="json-upload" accept=".json">
+
+        <!-- File Name -->
+        <span id="file-name" class="text-gray-400 italic truncate max-w-[200px]">
+          No file chosen
+        </span>
+
+        <!-- Visualize Button -->
+        <button id="visualize-btn"
+          class="bg-gray-600/50 text-gray-300 font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-300 cursor-not-allowed"
+          disabled>
+          Visualize
+        </button>
+      </div>
+
+      <!-- Status Message -->
+      <p id="message-area" class="text-center text-sm mt-5 h-5"></p>
+    </section>
+
+    <!-- Graph Section -->
+    <main>
+      <div class="bg-gray-800/40 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-lg p-3 md:p-6 hover:shadow-indigo-600/30 transition-all duration-300 animate-fade-in-up">
+        <div id="plot-container"></div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center mt-12 text-gray-500 text-xs animate-fade-in-up">
+      <p>&copy; 2024 Conversation Explorer. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity duration-300"></div>
+
+  <!-- Sidebar -->
+  <aside id="conversation-sidebar"
+    class="fixed top-0 right-0 h-full w-full max-w-md bg-gray-900 border-l border-gray-700 shadow-2xl p-6 transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col">
+    
+    <!-- Sidebar Header -->
+    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-700">
+      <h3 class="text-xl font-semibold text-white">Conversation Details</h3>
+      <button id="close-sidebar-btn"
+        class="text-gray-400 hover:text-white focus:outline-none rounded-full p-2 transition-colors">
+        ✕
+      </button>
+    </div>
+
+    <!-- Sidebar Content -->
+    <div id="sidebar-content" class="overflow-y-auto flex-grow text-gray-300 space-y-4">
+      <p>Click on a point in the visualization to explore conversation details.</p>
+    </div>
+  </aside>
+
+  <!-- Animations -->
+  <style>
+    @keyframes fade-in-down {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fade-in-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-down { animation: fade-in-down 0.8s ease-out both; }
+    .animate-fade-in-up { animation: fade-in-up 0.8s ease-out both; }
+  </style>
+
+  <!-- Your Logic -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // --- Data store for the current visualization ---
+      let currentGraphData = null;
+
+      // --- Default Data for Initial Display ---
+      const initialConversationData = {
+        "conversations": [
+          " What type of sensor is used in xiaomi phones ir blaster ...",
+          "What are the benefits of using a CDN for a website? ..."
+        ],
+        "nodes": [
+          { "id": 0, "label": " What type of sensor ...", "x": 0.05, "y": -0.01, "z": 0.007, "size": 1.0, "color": "rgb(152,0,67)" },
+          { "id": 1, "label": "What are the benefits ...", "x": -0.05, "y": 0.01, "z": -0.007, "size": 1.0, "color": "rgb(152,0,67)" }
+        ],
+        "edges": [
+            { "source": 0, "target": 1, "weight": 0.5 }
+        ]
+      };
+      
+      currentGraphData = initialConversationData; // Initialize the data store
+
+      // --- Process Data for Plotly ---
+      function processDataForPlot(graphData) {
+        const nodesTrace = {
+          x: graphData.nodes.map(node => node.x),
+          y: graphData.nodes.map(node => node.y),
+          z: graphData.nodes.map(node => node.z),
+          text: graphData.nodes.map(node => graphData.conversations[node.id] || `Conversation for node ${node.id}`),
+          hoverinfo: 'text',
+          mode: 'markers',
+          type: 'scatter3d',
+          name: 'Conversations',
+          marker: {
+            size: graphData.nodes.map(node => (node.size || 1) * 5 + 4),
+            color: graphData.nodes.map(node => node.color || `hsl(${node.id % 360}, 90%, 50%)`),
+            opacity: 0.9
+          }
+        };
+
+        const traces = [nodesTrace];
+
+        if (graphData.edges && graphData.edges.length > 0) {
+            const edgeX = [];
+            const edgeY = [];
+            const edgeZ = [];
+            const nodeMap = new Map(graphData.nodes.map(n => [n.id, n]));
+
+            for (const edge of graphData.edges) {
+                const sourceNode = nodeMap.get(edge.source);
+                const targetNode = nodeMap.get(edge.target);
+                if (sourceNode && targetNode) {
+                    edgeX.push(sourceNode.x, targetNode.x, null);
+                    edgeY.push(sourceNode.y, targetNode.y, null);
+                    edgeZ.push(sourceNode.z, targetNode.z, null);
+                }
+            }
+
+            const edgeTrace = {
+                x: edgeX,
+                y: edgeY,
+                z: edgeZ,
+                mode: 'lines',
+                type: 'scatter3d',
+                name: 'Connections',
+                line: {
+                    color: 'rgba(128, 128, 128, 0.5)',
+                    width: 2
+                },
+                hoverinfo: 'none'
+            };
+            traces.push(edgeTrace);
+        }
+
+        return traces;
+      }
+
+      const initialPlotData = processDataForPlot(currentGraphData);
+
+      const baseLayout = {
+        title: { text: '3D Conversation Clusters', font: { size: 22, color: '#fff' }},
+        autosize: true,
+        showlegend: false,
+        paper_bgcolor: 'rgba(255, 255, 255, 0)',
+        plot_bgcolor: 'rgba(255, 255, 255, 0)',
+        font: { family: 'Inter, sans-serif', size: 12, color: '#d1d5db' },
+        margin: { l: 0, r: 0, b: 0, t: 40 },
+        scene: {
+          xaxis: { title: 'Topic Vector X', showbackground: false, gridcolor: 'rgba(255, 255, 255, 0.1)' },
+          yaxis: { title: 'Sentiment Score Y', showbackground: false, gridcolor: 'rgba(255, 255, 255, 0.1)' },
+          zaxis: { title: 'Time/Duration Z', showbackground: false, gridcolor: 'rgba(255, 255, 255, 0.1)' },
+          camera: { eye: {x: 1.5, y: 1.5, z: 1.5} }
+        }
+      };
+
+      const config = { responsive: true, displaylogo: false, scrollZoom: true };
+      const plotContainer = document.getElementById('plot-container');
+      Plotly.newPlot(plotContainer, initialPlotData, baseLayout, config);
+      
+      // --- Sidebar Logic ---
+      const sidebar = document.getElementById('conversation-sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const closeBtn = document.getElementById('close-sidebar-btn');
+      const sidebarContent = document.getElementById('sidebar-content');
+
+      const openSidebar = (content) => {
+          if (!content) return; // Do nothing if content is missing
+          const formattedContent = content
+              .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>')
+              .replace(/\n/g, '<br>');
+          sidebarContent.innerHTML = `<p class="leading-relaxed">${formattedContent}</p>`;
+          sidebar.classList.remove('translate-x-full');
+          overlay.classList.remove('hidden');
+      };
+      
+      const closeSidebar = () => {
+          sidebar.classList.add('translate-x-full');
+          overlay.classList.add('hidden');
+      };
+
+      plotContainer.on('plotly_click', (data) => {
+          if (data.points.length > 0) {
+              const point = data.points[0];
+              // Ensure the click is on the nodes (trace 0) and not the edges
+              if (point.curveNumber === 0) { 
+                const pointIndex = point.pointNumber;
+                let conversationText = null;
+
+                if (currentGraphData && currentGraphData.nodes && currentGraphData.conversations) {
+                    const node = currentGraphData.nodes[pointIndex];
+                    if (node) {
+                        conversationText = currentGraphData.conversations[node.id];
+                    }
+                } 
+                else {
+                    const trace = plotContainer.data[0];
+                    if (trace && trace.text && trace.text[pointIndex]) {
+                        conversationText = trace.text[pointIndex];
+                    }
+                }
+                
+                openSidebar(conversationText);
+              }
+          }
+      });
+
+      closeBtn.addEventListener('click', closeSidebar);
+      overlay.addEventListener('click', closeSidebar);
+
+      // --- File Upload Logic ---
+      const uploadInput = document.getElementById('json-upload');
+      const visualizeBtn = document.getElementById('visualize-btn');
+      const fileNameSpan = document.getElementById('file-name');
+      const messageArea = document.getElementById('message-area');
+      let userFile = null;
+
+      uploadInput.addEventListener('change', (event) => {
+        messageArea.textContent = '';
+        if (event.target.files.length > 0) {
+          userFile = event.target.files[0];
+          fileNameSpan.textContent = userFile.name;
+          visualizeBtn.disabled = false;
+          visualizeBtn.classList.remove('cursor-not-allowed','bg-gray-600/50','text-gray-300');
+          visualizeBtn.classList.add('bg-indigo-600','hover:bg-indigo-700');
+        } else {
+          userFile = null;
+          fileNameSpan.textContent = 'No file chosen';
+          visualizeBtn.disabled = true;
+          visualizeBtn.classList.add('cursor-not-allowed','bg-gray-600/50','text-gray-300');
+          visualizeBtn.classList.remove('bg-indigo-600','hover:bg-indigo-700');
+        }
+      });
+
+      visualizeBtn.addEventListener('click', () => {
+        if (!userFile) {
+          messageArea.textContent = 'Please select a file first.';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const fileContent = JSON.parse(e.target.result);
+            let plotData;
+            let finalLayout = { ...baseLayout };
+            let graphDataForPlotting = null;
+
+            const sourceData = fileContent.conversation_graph_data || fileContent;
+            
+            currentGraphData = null; // Reset the stored data on new upload
+
+            if (Array.isArray(sourceData.conversations) && typeof sourceData.node_positions_3d === 'object') {
+              const nodes = Object.keys(sourceData.node_positions_3d).map(nodeId => {
+                const pos = sourceData.node_positions_3d[nodeId];
+                return { id: parseInt(nodeId,10), x: pos[0], y: pos[1], z: pos[2] };
+              });
+              graphDataForPlotting = { nodes: nodes, conversations: sourceData.conversations, edges: sourceData.edges || [] };
+            } else if (sourceData.nodes && sourceData.conversations) {
+              graphDataForPlotting = sourceData;
+            }
+
+            if (graphDataForPlotting) {
+              currentGraphData = graphDataForPlotting; // Store the newly parsed data
+              plotData = processDataForPlot(graphDataForPlotting);
+              finalLayout.title.text = 'Custom Data Visualization';
+            } else if (fileContent.data && fileContent.layout) {
+              plotData = fileContent.data;
+              finalLayout = { ...baseLayout, ...fileContent.layout };
+            } else {
+              throw new Error("JSON structure not recognized.");
+            }
+
+            Plotly.newPlot('plot-container', plotData, finalLayout, config);
+            messageArea.textContent = 'Successfully visualized ' + userFile.name;
+            messageArea.classList.add('text-green-600');
+          } catch (error) {
+            console.error("Error parsing JSON:", error);
+            messageArea.textContent = 'Error: ' + error.message;
+            messageArea.classList.add('text-red-500');
+          }
+        };
+        reader.readAsText(userFile);
+      });
+    });
+  </script>
+</body>
+</html>
+
