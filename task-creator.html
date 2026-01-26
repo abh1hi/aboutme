@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #6366f1;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            scroll-behavior: smooth;
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent) 0%, transparent 100%);
+            z-index: 0;
+        }
+
+        .task-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .task-card:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+            .task-card { 
+                border: 1px solid #ccc !important; 
+                background: white !important; 
+                color: black !important;
+                break-inside: avoid;
+            }
+            .timeline-line { background: #6366f1 !important; }
+            .text-dim { color: #666 !important; }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-task {
+            animation: slideIn 0.4s ease forwards;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 custom-scrollbar">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header Section -->
+        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 no-print">
+            <div>
+                <h1 class="text-4xl font-bold tracking-tight text-white mb-2">Timeline Architect</h1>
+                <p class="text-slate-400">Design your journey across time and dates.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print PDF
+                </button>
+                <button onclick="exportData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export JSON
+                </button>
+            </div>
+        </header>
+
+        <!-- Input Section -->
+        <section class="mb-12 no-print bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+            <h2 class="text-lg font-semibold mb-4 text-indigo-400 uppercase tracking-wider text-xs">Add New Event</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <input type="text" id="taskInput" placeholder="Task Headline" class="md:col-span-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                <input type="date" id="dateInput" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                <input type="time" id="timeInput" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="subtaskInput" placeholder="Add subtasks (separated by comma)" class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                <button onclick="addTask()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+                    Add
+                </button>
+            </div>
+        </section>
+
+        <!-- Timeline Display -->
+        <div id="timelineContainer" class="relative pl-12 min-h-[400px]">
+            <div class="timeline-line"></div>
+            
+            <div id="tasksList" class="flex flex-col gap-8">
+                <div id="emptyState" class="text-center py-20">
+                    <div class="text-slate-500 text-lg">Your timeline is empty.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 w-full max-w-md p-6 rounded-2xl border border-slate-700">
+            <h3 class="text-xl font-bold mb-4">Edit Entry</h3>
+            <input type="hidden" id="editIndex">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Headline</label>
+                    <input type="text" id="editHeadline" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Date</label>
+                        <input type="date" id="editDate" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Time</label>
+                        <input type="time" id="editTime" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Subtasks (Comma separated)</label>
+                    <textarea id="editSubtasks" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2"></textarea>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="closeModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition">Cancel</button>
+                    <button onclick="saveEdit()" class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition font-bold">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('timeline_tasks')) || [];
+
+        function saveToLocal() {
+            localStorage.setItem('timeline_tasks', JSON.stringify(tasks));
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('tasksList');
+            const emptyState = document.getElementById('emptyState');
+            
+            // Complex sort: Date first, then Time
+            tasks.sort((a, b) => {
+                const dateCompare = a.date.localeCompare(b.date);
+                if (dateCompare !== 0) return dateCompare;
+                return a.time.localeCompare(b.time);
+            });
+
+            if (tasks.length === 0) {
+                list.innerHTML = '';
+                list.appendChild(emptyState);
+                return;
+            }
+
+            list.innerHTML = '';
+            let currentGroupDate = '';
+
+            tasks.forEach((task, index) => {
+                // Add a date header if the date changes
+                if (task.date !== currentGroupDate) {
+                    const dateHeader = document.createElement('div');
+                    dateHeader.className = 'py-2 px-4 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest rounded-full w-fit mb-2 mt-4';
+                    dateHeader.innerText = formatDate(task.date);
+                    list.appendChild(dateHeader);
+                    currentGroupDate = task.date;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'task-card p-6 rounded-2xl relative animate-task';
+                
+                const dot = document.createElement('div');
+                dot.className = 'absolute -left-[41px] top-8 w-4 h-4 rounded-full border-4 border-slate-900 bg-indigo-500 z-10';
+                card.appendChild(dot);
+
+                const subtasksHtml = task.subtasks && task.subtasks.length > 0 
+                    ? `<ul class="mt-3 space-y-1">
+                        ${task.subtasks.map(s => `<li class="text-sm text-slate-400 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>${s.trim()}
+                        </li>`).join('')}
+                       </ul>`
+                    : '';
+
+                card.innerHTML += `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-indigo-400 font-mono font-bold text-sm tracking-widest">${formatTime(task.time)}</span>
+                        <div class="flex gap-2 no-print">
+                            <button onclick="openEdit(${index})" class="p-1.5 text-slate-400 hover:text-white transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button onclick="deleteTask(${index})" class="p-1.5 text-slate-400 hover:text-red-400 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">${task.headline}</h3>
+                    ${subtasksHtml}
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function formatTime(timeStr) {
+            if(!timeStr) return '';
+            const [hours, minutes] = timeStr.split(':');
+            let h = parseInt(hours);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            return `${h}:${minutes} ${ampm}`;
+        }
+
+        function formatDate(dateStr) {
+            if(!dateStr) return 'No Date';
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            const date = new Date(dateStr + 'T00:00:00'); // Prevent timezone shifts
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        function addTask() {
+            const headline = document.getElementById('taskInput').value;
+            const date = document.getElementById('dateInput').value;
+            const time = document.getElementById('timeInput').value;
+            const subtasksRaw = document.getElementById('subtaskInput').value;
+
+            if (!headline || !date || !time) {
+                alertBox("Please provide headline, date, and time.");
+                return;
+            }
+
+            const subtasks = subtasksRaw ? subtasksRaw.split(',').filter(s => s.trim() !== "") : [];
+
+            tasks.push({ headline, date, time, subtasks });
+            saveToLocal();
+            renderTasks();
+
+            // Clear inputs
+            document.getElementById('taskInput').value = '';
+            document.getElementById('dateInput').value = '';
+            document.getElementById('timeInput').value = '';
+            document.getElementById('subtaskInput').value = '';
+        }
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            saveToLocal();
+            renderTasks();
+        }
+
+        function openEdit(index) {
+            const task = tasks[index];
+            document.getElementById('editIndex').value = index;
+            document.getElementById('editHeadline').value = task.headline;
+            document.getElementById('editDate').value = task.date;
+            document.getElementById('editTime').value = task.time;
+            document.getElementById('editSubtasks').value = task.subtasks.join(', ');
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function saveEdit() {
+            const index = document.getElementById('editIndex').value;
+            const headline = document.getElementById('editHeadline').value;
+            const date = document.getElementById('editDate').value;
+            const time = document.getElementById('editTime').value;
+            const subtasksRaw = document.getElementById('editSubtasks').value;
+
+            if (headline && date && time) {
+                tasks[index] = {
+                    headline,
+                    date,
+                    time,
+                    subtasks: subtasksRaw.split(',').filter(s => s.trim() !== "")
+                };
+                saveToLocal();
+                renderTasks();
+                closeModal();
+            }
+        }
+
+        function alertBox(msg) {
+            const div = document.createElement('div');
+            div.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-3 rounded-full shadow-2xl z-[100] animate-bounce";
+            div.innerText = msg;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "timeline_data.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        // Set default date to today
+        window.onload = () => {
+            document.getElementById('dateInput').valueAsDate = new Date();
+            renderTasks();
+        };
+    </script>
+</body>
+</html>
+
