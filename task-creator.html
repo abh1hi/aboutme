@@ -3,342 +3,436 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timeline Architect</title>
+    <title>Timeline Hub | Project Roadmap</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --accent: #6366f1;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
+            --m3-primary: #6750A4;
+            --m3-on-primary: #FFFFFF;
+            --m3-primary-container: #EADDFF;
+            --m3-on-primary-container: #21005D;
+            --m3-surface: #FEF7FF;
+            --m3-on-surface: #1D1B20;
+            --m3-surface-container: #F3EDF7;
+            --m3-surface-container-high: #ECE6F0;
+            --m3-outline: #79747E;
+            --m3-secondary-container: #E8DEF8;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            scroll-behavior: smooth;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--m3-surface);
+            color: var(--m3-on-surface);
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
         }
 
-        .timeline-line {
-            position: absolute;
-            left: 20px;
-            top: 0;
+        .m3-sidebar {
+            width: 280px;
+            background-color: var(--m3-surface-container);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 40;
+            flex-shrink: 0;
+        }
+
+        .m3-card {
+            background-color: var(--m3-surface-container-high);
+            border-radius: 24px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .m3-card.completed { opacity: 0.6; }
+
+        .m3-fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: var(--m3-primary-container);
+            color: var(--m3-on-primary-container);
+            padding: 16px 24px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 30;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .bottom-sheet {
+            position: fixed;
             bottom: 0;
-            width: 2px;
-            background: linear-gradient(180deg, var(--accent) 0%, transparent 100%);
-            z-index: 0;
+            left: 0;
+            right: 0;
+            background: var(--m3-surface);
+            border-top-left-radius: 28px;
+            border-top-right-radius: 28px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            box-shadow: 0 -8px 32px rgba(0,0,0,0.1);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-        .task-card {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
+        .bottom-sheet.active { transform: translateY(0); }
+
+        .scrim {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 90;
         }
 
-        .task-card:hover {
-            border-color: var(--accent);
-            transform: translateX(4px);
+        .scrim.active { opacity: 1; pointer-events: auto; }
+
+        .category-chip {
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: var(--m3-secondary-container);
+        }
+
+        @media (max-width: 1024px) {
+            .m3-sidebar {
+                position: absolute;
+                left: 0;
+                transform: translateX(-100%);
+            }
+            .m3-sidebar.open { transform: translateX(0); }
         }
 
         @media print {
             .no-print { display: none !important; }
-            body { background: white !important; color: black !important; }
-            .task-card { 
-                border: 1px solid #ccc !important; 
-                background: white !important; 
-                color: black !important;
-                break-inside: avoid;
-            }
-            .timeline-line { background: #6366f1 !important; }
-            .text-dim { color: #666 !important; }
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 10px;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-task {
-            animation: slideIn 0.4s ease forwards;
-        }
-
-        input[type="date"]::-webkit-calendar-picker-indicator,
-        input[type="time"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
+            body { display: block; height: auto; background: white; }
+            .m3-sidebar { display: none; }
+            .m3-card { border: 1px solid #eee; background: white; break-inside: avoid; }
+            main { overflow: visible !important; height: auto !important; }
         }
     </style>
 </head>
-<body class="p-4 md:p-8 custom-scrollbar">
+<body>
 
-    <div class="max-w-4xl mx-auto">
-        <!-- Header Section -->
-        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 no-print">
-            <div>
-                <h1 class="text-4xl font-bold tracking-tight text-white mb-2">Timeline Architect</h1>
-                <p class="text-slate-400">Design your journey across time and dates.</p>
+    <!-- SIDENAV -->
+    <aside id="sidebar" class="m3-sidebar no-print">
+        <div class="p-6 flex flex-col h-full">
+            <div class="flex items-center gap-3 mb-10">
+                <span class="material-symbols-outlined text-primary text-3xl">route</span>
+                <h1 class="text-xl font-bold tracking-tight">Timeline Hub</h1>
             </div>
-            <div class="flex gap-2">
-                <button onclick="window.print()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                    Print PDF
+            
+            <div class="space-y-8">
+                <!-- Stats Overview -->
+                <div class="p-5 bg-[var(--m3-primary-container)] rounded-[24px]">
+                    <p class="text-[10px] font-black text-[var(--m3-on-primary-container)] uppercase tracking-widest mb-1">Total Milestones</p>
+                    <p id="totalTasksCount" class="text-3xl font-bold text-[var(--m3-on-primary-container)]">0</p>
+                    <div class="mt-3 h-1.5 w-full bg-white/30 rounded-full overflow-hidden">
+                        <div id="progressBar" class="h-full bg-[var(--m3-on-primary-container)]" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Navigation/Filters -->
+                <nav class="space-y-4 px-2">
+                    <h2 class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Filter by Group</h2>
+                    <div id="categoryFilters" class="space-y-1">
+                        <button onclick="setFilter('all')" class="w-full flex justify-between items-center p-2 rounded-lg hover:bg-slate-200 text-sm font-medium">
+                            All Events <span id="countAll" class="text-xs opacity-50">0</span>
+                        </button>
+                        <!-- Dynamic categories will be added here -->
+                    </div>
+                </nav>
+            </div>
+
+            <div class="mt-auto space-y-2">
+                <button onclick="openSheet('export')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-200 transition text-sm">
+                    <span class="material-symbols-outlined">file_export</span> Import / Export
                 </button>
-                <button onclick="exportData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Export JSON
+                <button onclick="window.print()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-200 transition text-sm">
+                    <span class="material-symbols-outlined">print</span> Print Roadmap
                 </button>
             </div>
+        </div>
+    </aside>
+
+    <!-- MAIN VIEW -->
+    <main class="flex-grow flex flex-col h-full overflow-hidden">
+        <header class="h-16 flex items-center justify-between px-6 border-b border-slate-200 no-print flex-shrink-0 bg-white">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-full hover:bg-slate-100">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-2 text-slate-400">search</span>
+                    <input type="text" id="searchInput" oninput="renderTimeline()" placeholder="Search project milestones..." class="bg-slate-100 rounded-full py-2 pl-10 pr-4 outline-none text-sm w-48 md:w-80 focus:ring-2 focus:ring-primary transition">
+                </div>
+            </div>
+            <div id="headerDate" class="text-xs font-bold text-slate-400 uppercase">Project Roadmap</div>
         </header>
 
-        <!-- Input Section -->
-        <section class="mb-12 no-print bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
-            <h2 class="text-lg font-semibold mb-4 text-indigo-400 uppercase tracking-wider text-xs">Add New Event</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <input type="text" id="taskInput" placeholder="Task Headline" class="md:col-span-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                <input type="date" id="dateInput" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                <input type="time" id="timeInput" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+        <div class="flex-grow overflow-y-auto p-6 lg:p-12">
+            <div class="max-w-3xl mx-auto relative pl-10">
+                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+                <div id="timelineList" class="space-y-10">
+                    <!-- Landmarks injected here -->
+                </div>
             </div>
-            <div class="flex gap-2">
-                <input type="text" id="subtaskInput" placeholder="Add subtasks (separated by comma)" class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                <button onclick="addTask()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-                    Add
-                </button>
-            </div>
-        </section>
+        </div>
+    </main>
 
-        <!-- Timeline Display -->
-        <div id="timelineContainer" class="relative pl-12 min-h-[400px]">
-            <div class="timeline-line"></div>
+    <!-- FAB -->
+    <div class="m3-fab no-print" onclick="openSheet('add')">
+        <span class="material-symbols-outlined">add</span>
+        <span>Add Milestone</span>
+    </div>
+
+    <div id="scrim" class="scrim" onclick="closeSheets()"></div>
+
+    <!-- ADD/EDIT SHEET -->
+    <div id="inputSheet" class="bottom-sheet p-8 no-print">
+        <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-8"></div>
+        <div class="max-w-xl mx-auto">
+            <h2 id="sheetTitle" class="text-2xl font-bold mb-8">Create Milestone</h2>
+            <input type="hidden" id="editIndex" value="">
             
-            <div id="tasksList" class="flex flex-col gap-8">
-                <div id="emptyState" class="text-center py-20">
-                    <div class="text-slate-500 text-lg">Your timeline is empty.</div>
+            <div class="space-y-6">
+                <div>
+                    <label class="text-[10px] font-black text-primary mb-1 block uppercase">Headline</label>
+                    <input type="text" id="taskHeadline" placeholder="e.g. Beta Launch" class="w-full bg-slate-100 border-b-2 border-slate-400 p-3 rounded-t outline-none focus:border-primary">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-primary mb-1 block uppercase">Date</label>
+                        <input type="date" id="taskDate" class="w-full bg-slate-100 border-b-2 border-slate-400 p-3 rounded-t outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-primary mb-1 block uppercase">Time</label>
+                        <input type="time" id="taskTime" class="w-full bg-slate-100 border-b-2 border-slate-400 p-3 rounded-t outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-primary mb-1 block uppercase">Category / Group</label>
+                    <input type="text" id="taskCategory" placeholder="e.g. Engineering, Marketing" class="w-full bg-slate-100 border-b-2 border-slate-400 p-3 rounded-t outline-none">
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-primary mb-1 block uppercase">Sub-benchmarks (comma separated)</label>
+                    <textarea id="taskSubtasks" class="w-full bg-slate-100 border-b-2 border-slate-400 p-3 rounded-t outline-none h-24 resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button onclick="saveTask()" class="flex-grow bg-[var(--m3-primary)] text-white py-4 rounded-full font-bold shadow-lg">Save Milestone</button>
+                    <button onclick="closeSheets()" class="px-8 py-4 text-slate-500 font-bold">Cancel</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 w-full max-w-md p-6 rounded-2xl border border-slate-700">
-            <h3 class="text-xl font-bold mb-4">Edit Entry</h3>
-            <input type="hidden" id="editIndex">
-            <div class="space-y-4">
-                <div>
-                    <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Headline</label>
-                    <input type="text" id="editHeadline" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Date</label>
-                        <input type="date" id="editDate" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2">
-                    </div>
-                    <div>
-                        <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Time</label>
-                        <input type="time" id="editTime" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2">
-                    </div>
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 uppercase font-bold mb-1 block">Subtasks (Comma separated)</label>
-                    <textarea id="editSubtasks" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2"></textarea>
-                </div>
-                <div class="flex gap-2 pt-2">
-                    <button onclick="closeModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition">Cancel</button>
-                    <button onclick="saveEdit()" class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition font-bold">Save</button>
-                </div>
-            </div>
+    <!-- EXPORT SHEET -->
+    <div id="exportSheet" class="bottom-sheet p-10 no-print">
+        <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-10"></div>
+        <h2 class="text-xl font-bold mb-10 text-center">Data Management</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto">
+            <button onclick="exportData('json')" class="flex flex-col items-center gap-3 p-6 bg-slate-100 rounded-3xl hover:bg-slate-200 transition">
+                <span class="material-symbols-outlined text-4xl">download</span>
+                <span class="text-sm font-bold">Export JSON</span>
+            </button>
+            <button onclick="document.getElementById('fileInput').click()" class="flex flex-col items-center gap-3 p-6 bg-slate-100 rounded-3xl hover:bg-slate-200 transition">
+                <span class="material-symbols-outlined text-4xl">upload</span>
+                <span class="text-sm font-bold">Import File</span>
+            </button>
         </div>
+        <input type="file" id="fileInput" hidden accept=".json,.csv" onchange="handleFileImport(event)">
+        <button onclick="closeSheets()" class="mt-8 w-full text-slate-400 font-bold uppercase text-xs">Dismiss</button>
     </div>
 
     <script>
-        let tasks = JSON.parse(localStorage.getItem('timeline_tasks')) || [];
+        let tasks = JSON.parse(localStorage.getItem('timeline_hub_tasks')) || [];
+        let activeFilter = 'all';
 
-        function saveToLocal() {
-            localStorage.setItem('timeline_tasks', JSON.stringify(tasks));
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function closeSheets() {
+            document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
+            document.getElementById('scrim').classList.remove('active');
+            document.getElementById('sidebar').classList.remove('open');
         }
 
-        function renderTasks() {
-            const list = document.getElementById('tasksList');
-            const emptyState = document.getElementById('emptyState');
+        function save() {
+            localStorage.setItem('timeline_hub_tasks', JSON.stringify(tasks));
+            renderTimeline();
+        }
+
+        function setFilter(cat) {
+            activeFilter = cat;
+            renderTimeline();
+        }
+
+        function renderTimeline() {
+            const list = document.getElementById('timelineList');
+            const search = document.getElementById('searchInput').value.toLowerCase();
             
-            // Complex sort: Date first, then Time
-            tasks.sort((a, b) => {
-                const dateCompare = a.date.localeCompare(b.date);
-                if (dateCompare !== 0) return dateCompare;
-                return a.time.localeCompare(b.time);
+            // Basic Stats
+            const completedCount = tasks.filter(t => t.completed).length;
+            document.getElementById('totalTasksCount').innerText = tasks.length;
+            document.getElementById('progressBar').style.width = `${(completedCount/tasks.length)*100 || 0}%`;
+
+            // Sort by Date & Time
+            tasks.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+            // Populate Sidebar Categories
+            const categories = [...new Set(tasks.map(t => t.category))].filter(c => c);
+            const catContainer = document.getElementById('categoryFilters');
+            catContainer.innerHTML = `<button onclick="setFilter('all')" class="w-full flex justify-between items-center p-2 rounded-lg hover:bg-slate-200 text-sm ${activeFilter === 'all' ? 'bg-slate-200' : ''}">All Events <span class="text-xs opacity-50">${tasks.length}</span></button>`;
+            
+            categories.forEach(cat => {
+                const count = tasks.filter(t => t.category === cat).length;
+                catContainer.innerHTML += `
+                    <button onclick="setFilter('${cat}')" class="w-full flex justify-between items-center p-2 rounded-lg hover:bg-slate-200 text-sm ${activeFilter === cat ? 'bg-slate-200' : ''}">
+                        ${cat} <span class="text-xs opacity-50">${count}</span>
+                    </button>`;
             });
 
-            if (tasks.length === 0) {
-                list.innerHTML = '';
-                list.appendChild(emptyState);
-                return;
-            }
+            // Filter
+            const filtered = tasks.filter(t => {
+                const matchesSearch = t.headline.toLowerCase().includes(search);
+                const matchesCat = activeFilter === 'all' || t.category === activeFilter;
+                return matchesSearch && matchesCat;
+            });
 
             list.innerHTML = '';
-            let currentGroupDate = '';
+            let lastDate = '';
 
-            tasks.forEach((task, index) => {
-                // Add a date header if the date changes
-                if (task.date !== currentGroupDate) {
-                    const dateHeader = document.createElement('div');
-                    dateHeader.className = 'py-2 px-4 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest rounded-full w-fit mb-2 mt-4';
-                    dateHeader.innerText = formatDate(task.date);
-                    list.appendChild(dateHeader);
-                    currentGroupDate = task.date;
+            filtered.forEach((task, index) => {
+                const originalIndex = tasks.indexOf(task);
+                if (task.date !== lastDate) {
+                    list.innerHTML += `<div class="sticky top-0 bg-[var(--m3-surface)]/90 backdrop-blur py-4 z-10 text-[10px] font-black text-primary uppercase tracking-[0.2em] pl-2 border-b border-slate-100">${formatDate(task.date)}</div>`;
+                    lastDate = task.date;
                 }
 
                 const card = document.createElement('div');
-                card.className = 'task-card p-6 rounded-2xl relative animate-task';
+                card.className = `m3-card p-6 relative ${task.completed ? 'completed' : ''}`;
                 
                 const dot = document.createElement('div');
-                dot.className = 'absolute -left-[41px] top-8 w-4 h-4 rounded-full border-4 border-slate-900 bg-indigo-500 z-10';
+                dot.className = `absolute -left-[30px] top-8 w-3.5 h-3.5 rounded-full bg-primary ring-4 ring-[var(--m3-surface)] z-10`;
                 card.appendChild(dot);
 
-                const subtasksHtml = task.subtasks && task.subtasks.length > 0 
-                    ? `<ul class="mt-3 space-y-1">
-                        ${task.subtasks.map(s => `<li class="text-sm text-slate-400 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>${s.trim()}
-                        </li>`).join('')}
-                       </ul>`
-                    : '';
-
-                card.innerHTML += `
+                card.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
-                        <span class="text-indigo-400 font-mono font-bold text-sm tracking-widest">${formatTime(task.time)}</span>
-                        <div class="flex gap-2 no-print">
-                            <button onclick="openEdit(${index})" class="p-1.5 text-slate-400 hover:text-white transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                            <button onclick="deleteTask(${index})" class="p-1.5 text-slate-400 hover:text-red-400 transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-sm opacity-60 font-mono">${formatTime(task.time)}</span>
+                            ${task.category ? `<span class="category-chip">${task.category}</span>` : ''}
+                        </div>
+                        <div class="flex gap-1 no-print">
+                            <button onclick="toggleComplete(${originalIndex})" class="p-2 rounded-full hover:bg-slate-200 transition ${task.completed ? 'text-green-600' : 'text-slate-400'}"><span class="material-symbols-outlined text-sm">check_circle</span></button>
+                            <button onclick="editTask(${originalIndex})" class="p-2 text-slate-400 hover:text-black"><span class="material-symbols-outlined text-sm">edit</span></button>
+                            <button onclick="removeTask(${originalIndex})" class="p-2 text-red-200 hover:text-red-500"><span class="material-symbols-outlined text-sm">delete</span></button>
                         </div>
                     </div>
-                    <h3 class="text-xl font-bold text-white">${task.headline}</h3>
-                    ${subtasksHtml}
+                    <h3 class="text-lg font-bold">${task.headline}</h3>
+                    ${task.subtasks.length ? `<div class="mt-3 flex flex-wrap gap-2">${task.subtasks.map(s => `<span class="bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px] text-slate-500 font-medium">${s}</span>`).join('')}</div>` : ''}
                 `;
                 list.appendChild(card);
             });
         }
 
-        function formatTime(timeStr) {
-            if(!timeStr) return '';
-            const [hours, minutes] = timeStr.split(':');
-            let h = parseInt(hours);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12 || 12;
-            return `${h}:${minutes} ${ampm}`;
-        }
-
-        function formatDate(dateStr) {
-            if(!dateStr) return 'No Date';
-            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-            const date = new Date(dateStr + 'T00:00:00'); // Prevent timezone shifts
-            return date.toLocaleDateString('en-US', options);
-        }
-
-        function addTask() {
-            const headline = document.getElementById('taskInput').value;
-            const date = document.getElementById('dateInput').value;
-            const time = document.getElementById('timeInput').value;
-            const subtasksRaw = document.getElementById('subtaskInput').value;
-
-            if (!headline || !date || !time) {
-                alertBox("Please provide headline, date, and time.");
-                return;
+        // CRUD
+        function openSheet(id) {
+            closeSheets();
+            if (id === 'add') {
+                document.getElementById('inputSheet').classList.add('active');
+                document.getElementById('sheetTitle').innerText = "Create Milestone";
+                document.getElementById('editIndex').value = "";
+                document.getElementById('taskHeadline').value = "";
+                document.getElementById('taskDate').valueAsDate = new Date();
+                document.getElementById('taskCategory').value = "";
+                document.getElementById('taskSubtasks').value = "";
+            } else if (id === 'export') {
+                document.getElementById('exportSheet').classList.add('active');
             }
-
-            const subtasks = subtasksRaw ? subtasksRaw.split(',').filter(s => s.trim() !== "") : [];
-
-            tasks.push({ headline, date, time, subtasks });
-            saveToLocal();
-            renderTasks();
-
-            // Clear inputs
-            document.getElementById('taskInput').value = '';
-            document.getElementById('dateInput').value = '';
-            document.getElementById('timeInput').value = '';
-            document.getElementById('subtaskInput').value = '';
+            document.getElementById('scrim').classList.add('active');
         }
 
-        function deleteTask(index) {
-            tasks.splice(index, 1);
-            saveToLocal();
-            renderTasks();
+        function saveTask() {
+            const idx = document.getElementById('editIndex').value;
+            const task = {
+                headline: document.getElementById('taskHeadline').value,
+                date: document.getElementById('taskDate').value,
+                time: document.getElementById('taskTime').value,
+                category: document.getElementById('taskCategory').value.trim(),
+                subtasks: document.getElementById('taskSubtasks').value.split(',').map(s => s.trim()).filter(s => s),
+                completed: idx !== "" ? tasks[idx].completed : false
+            };
+
+            if (!task.headline || !task.date) return;
+            if (idx === "") tasks.push(task);
+            else tasks[idx] = task;
+
+            save();
+            closeSheets();
         }
 
-        function openEdit(index) {
-            const task = tasks[index];
-            document.getElementById('editIndex').value = index;
-            document.getElementById('editHeadline').value = task.headline;
-            document.getElementById('editDate').value = task.date;
-            document.getElementById('editTime').value = task.time;
-            document.getElementById('editSubtasks').value = task.subtasks.join(', ');
-            document.getElementById('editModal').classList.remove('hidden');
+        function editTask(i) {
+            const t = tasks[i];
+            document.getElementById('editIndex').value = i;
+            document.getElementById('taskHeadline').value = t.headline;
+            document.getElementById('taskDate').value = t.date;
+            document.getElementById('taskTime').value = t.time;
+            document.getElementById('taskCategory').value = t.category;
+            document.getElementById('taskSubtasks').value = t.subtasks.join(', ');
+            openSheet('edit');
+            document.getElementById('inputSheet').classList.add('active');
+            document.getElementById('sheetTitle').innerText = "Edit Milestone";
         }
 
-        function closeModal() {
-            document.getElementById('editModal').classList.add('hidden');
+        function toggleComplete(i) { tasks[i].completed = !tasks[i].completed; save(); }
+        function removeTask(i) { if(confirm("Permanently delete this milestone?")) { tasks.splice(i, 1); save(); } }
+
+        function exportData(fmt) {
+            const blob = new Blob([JSON.stringify(tasks, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `timeline_hub_${Date.now()}.json`;
+            a.click();
         }
 
-        function saveEdit() {
-            const index = document.getElementById('editIndex').value;
-            const headline = document.getElementById('editHeadline').value;
-            const date = document.getElementById('editDate').value;
-            const time = document.getElementById('editTime').value;
-            const subtasksRaw = document.getElementById('editSubtasks').value;
-
-            if (headline && date && time) {
-                tasks[index] = {
-                    headline,
-                    date,
-                    time,
-                    subtasks: subtasksRaw.split(',').filter(s => s.trim() !== "")
-                };
-                saveToLocal();
-                renderTasks();
-                closeModal();
-            }
+        function handleFileImport(e) {
+            const f = e.target.files[0];
+            const r = new FileReader();
+            r.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    tasks = [...tasks, ...data.filter(d => d.headline && d.date)];
+                    save();
+                    closeSheets();
+                } catch(err) { alert("Invalid file format"); }
+            };
+            r.readAsText(f);
         }
 
-        function alertBox(msg) {
-            const div = document.createElement('div');
-            div.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-3 rounded-full shadow-2xl z-[100] animate-bounce";
-            div.innerText = msg;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 3000);
+        // Helpers
+        function formatTime(t) {
+            const [h, m] = t.split(':');
+            const hh = parseInt(h);
+            return `${hh % 12 || 12}:${m} ${hh >= 12 ? 'PM' : 'AM'}`;
+        }
+        function formatDate(d) {
+            return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
         }
 
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "timeline_data.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-        }
-
-        // Set default date to today
-        window.onload = () => {
-            document.getElementById('dateInput').valueAsDate = new Date();
-            renderTasks();
-        };
+        window.onload = renderTimeline;
     </script>
 </body>
 </html>
-
